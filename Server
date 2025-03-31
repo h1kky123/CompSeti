@@ -1,0 +1,314 @@
+1)Задание
+#include <fstream>
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <vector>
+#include <sstream>
+
+using namespace std;
+
+string filename = "C:\\Users\\Maybe\\source\\repos\\data.txt";  // Файл с данными
+string file_back = "C:\\Users\\Maybe\\source\\repos\\file_back.txt"; // Файл для ответа клиенту
+string lastContent = "";  // Переменная для хранения последнего содержимого файла
+
+// Функция для чтения чисел из файла
+vector<int> readNumbersFromFile(const string& filename) {
+    ifstream file(filename);
+    vector<int> numbers;
+    string content, temp;
+
+    if (!file) {
+        cout << "Ошибка открытия файла!" << endl;
+        return numbers;
+    }
+
+    getline(file, content, '\0');
+    file.close();
+
+    if (content == lastContent) {
+        return {}; // Если содержимое не изменилось, возвращаем пустой вектор
+    }
+    lastContent = content; // Обновляем последнее содержимое файла
+
+    stringstream ss(content);
+    while (ss >> temp) {
+        try {
+            numbers.push_back(stoi(temp));
+        }
+        catch (...) {
+            cout << "Ошибка преобразования числа!" << endl;
+        }
+    }
+
+    return numbers;
+}
+
+// Функция вычисления среднего балла
+double calculateAverage(const vector<int>& numbers) {
+    if (numbers.empty()) return 0.0;
+    double sum = 0;
+    for (int num : numbers) sum += num;
+    return sum / numbers.size();
+}
+
+// Функция записи результата в файл file_back.txt
+void writeToFileBack(const string& message) {
+    ofstream file(file_back, ios::trunc); // Перезаписываем файл
+    if (!file) {
+        cout << "Ошибка записи в файл file_back.txt!" << endl;
+        return;
+    }
+    file << message;
+    file.close();
+}
+
+int main() {
+    setlocale(LC_ALL, "rus");
+
+    cout << "Сервер работает..." << endl;
+
+    while (true) {
+        this_thread::sleep_for(chrono::seconds(1)); // Проверяем каждую секунду
+
+        vector<int> numbers = readNumbersFromFile(filename);
+        if (numbers.empty()) {
+            continue; // Если нет изменений, продолжаем ожидание
+        }
+
+        cout << "\nФайл обновлён!" << endl;
+        double avg = calculateAverage(numbers);
+
+        string result = "Средний балл: " + to_string(avg) + "\n";
+        if (avg > 4.5) {
+            result += "Студент получает стипендию!";
+        }
+        else {
+            result += "Стипендии нет.";
+        }
+
+        cout << result << endl;
+        writeToFileBack(result); // Записываем результат в file_back.txt
+    }
+
+    return 0;
+}
+
+Бинарный файл
+#include <fstream>
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <vector>
+#include <string>
+
+using namespace std;
+
+struct Student {
+    string name;
+    vector<int> grades;
+};
+
+Student readStudentFromFile(const string& filename) {
+    ifstream file(filename, ios::binary);
+    Student student;
+
+    if (!file) {
+        cout << "Ошибка открытия бинарного файла!" << endl;
+        return student;
+    }
+
+    // Читаем длину имени
+    size_t nameLength;
+    file.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+    if (file.eof()) {
+        file.close();
+        return student;
+    }
+
+    // Читаем имя
+    char* buffer = new char[nameLength + 1];
+    file.read(buffer, nameLength);
+    buffer[nameLength] = '\0';
+    student.name = string(buffer);
+    delete[] buffer;
+
+    // Читаем количество оценок
+    size_t gradesSize;
+    file.read(reinterpret_cast<char*>(&gradesSize), sizeof(size_t));
+    if (file.eof() || gradesSize == 0) {
+        file.close();
+        return student;
+    }
+
+    // Читаем оценки
+    student.grades.resize(gradesSize);
+    file.read(reinterpret_cast<char*>(student.grades.data()), sizeof(int) * gradesSize);
+    file.close();
+
+    return student;
+}
+
+double calculateAverage(const vector<int>& grades) {
+    if (grades.empty()) return 0.0;
+    double sum = 0;
+    for (int grade : grades) sum += grade;
+    return sum / grades.size();
+}
+
+int main() {
+    setlocale(LC_ALL, "rus");
+    string filename = "C:\\Users\\Maybe\\source\\repos\\data.bin";
+    string resultFilename = "C:\\Users\\Maybe\\source\\repos\\result.txt";
+
+    cout << "Сервер запущен и следит за изменением файла..." << endl;
+
+    while (true) {
+        this_thread::sleep_for(chrono::seconds(1)); // Проверка каждую секунду
+
+        Student student = readStudentFromFile(filename);
+        if (student.grades.empty()) {
+            continue;
+        }
+
+        cout << "\nФайл обновлён!" << endl;
+        cout << "Студент: " << student.name << endl;
+
+        double avg = calculateAverage(student.grades);
+        cout << "Средний балл: " << avg << endl;
+
+        // Записываем результат в файл
+        ofstream resultFile(resultFilename);
+        if (!resultFile) {
+            cout << "Ошибка записи результата!" << endl;
+            continue;
+        }
+
+        if (avg > 4.5) {
+            resultFile << "Студент " << student.name << ": Средний балл " << avg
+                << " - Получает стипендию!";
+            cout << "Студент получает стипендию!" << endl;
+        }
+        else {
+            resultFile << "Студент " << student.name << ": Средний балл " << avg
+                << " - Стипендия не положена.";
+            cout << "Стипендия не положена." << endl;
+        }
+        resultFile.close();
+    }
+
+    return 0;
+}
+
+
+TCP
+#include <iostream>  
+#include <winsock2.h> 
+#include <windows.h> 
+#include <string> 
+#pragma comment (lib, "Ws2_32.lib")  
+using namespace std;
+#define SRV_PORT 1234  
+#define BUF_SIZE 64  
+const string QUEST = "Who are you?\n";
+int main() {
+    char buff[1024];
+    if (WSAStartup(0x0202, (WSADATA*)&buff[0]))
+    {
+        cout << "Error WSAStartup \n" << WSAGetLastError();   // Ошибка!
+        return -1;
+    }
+    SOCKET s, s_new;
+    int from_len;
+    char buf[BUF_SIZE] = { 0 };
+    sockaddr_in sin, from_sin;
+    s = socket(AF_INET, SOCK_STREAM, 0);
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = 0;
+    sin.sin_port = htons(SRV_PORT);
+    bind(s, (sockaddr*)&sin, sizeof(sin));
+    string msg, msg1;
+    listen(s, 3);
+    while (1) {
+        from_len = sizeof(from_sin);
+        s_new = accept(s, (sockaddr*)&from_sin, &from_len);
+        cout << "new connected client! " << endl;
+        msg = QUEST;
+        while (1) {
+            send(s_new, (char*)&msg[0], msg.size(), 0);
+            from_len = recv(s_new, (char*)buf, BUF_SIZE, 0);
+            buf[from_len] = 0;
+            msg1 = (string)buf;
+            cout << msg1 << endl;;
+            if (msg1 == "Bye") break;
+            getline(cin, msg);
+        }
+        cout << "client is lost";
+        closesocket(s_new);
+    }
+    return 0;
+}
+
+UDP
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <winsock2.h>
+#include <windows.h>
+#include <string>
+#include <iostream>
+#pragma comment(lib, "Ws2_32.lib")
+#pragma warning(disable: 4996)
+using namespace std;
+#define PORT 666    // порт сервера
+#define sHELLO "Hello, STUDENT\n"
+int main() {
+    char buff[1024];
+    cout << "UDP DEMO ECHO-SERVER\n";
+    // шаг 1 - подключение библиотеки 
+    if (WSAStartup(0x202, (WSADATA*)&buff[0]))
+    {
+        cout << "WSAStartup error: " << WSAGetLastError();
+        return -1;
+    }
+    // шаг 2 - создание сокета
+    SOCKET Lsock;
+    Lsock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (Lsock == INVALID_SOCKET) {
+        cout << "SOCKET() ERROR: " << WSAGetLastError();
+        WSACleanup();
+        return -1;
+    }
+    // шаг 3 - связывание сокета с локальным адресом 
+    sockaddr_in Laddr;
+    Laddr.sin_family = AF_INET;
+    Laddr.sin_addr.s_addr = INADDR_ANY;   // или 0 (любой IP адрес)
+    Laddr.sin_port = htons(PORT);
+    if (bind(Lsock, (sockaddr*)&Laddr, sizeof(Laddr)))
+    {
+        cout << "BIND ERROR:" << WSAGetLastError();
+        closesocket(Lsock);
+        WSACleanup();
+        return -1;
+    }
+
+     // шаг 4 обработка пакетов, присланных клиентами
+    while(1)     {
+      sockaddr_in    Caddr;
+      int Caddr_size = sizeof(Caddr);
+      int bsize=recvfrom(Lsock,&buff[0], sizeof(buff)-1,0,
+        (sockaddr *) &Caddr, &Caddr_size);
+      if (bsize==SOCKET_ERROR)
+      cout<< "RECVFROM() ERROR:"<< WSAGetLastError ();
+  // Определяем IP-адрес клиента и прочие атрибуты
+      HOSTENT *hst;
+      hst=gethostbyaddr((char *)&Caddr.sin_addr,4,AF_INET);
+      cout<< "NEW DATAGRAM!\n"<<
+      ((hst)?hst->h_name:"Unknown host")<<"/n"<<
+      inet_ntoa(Caddr.sin_addr)<< "/n"<< ntohs(Caddr.sin_port)<< '\n';
+      buff[bsize]='\0';              // добавление завершающего нуля
+           cout << "C=>S:" << buff<<'\n' ;        // Вывод на экран 
+  // посылка датаграммы клиенту
+        sendto(Lsock,&buff[0],bsize,0,(sockaddr *)&Caddr, sizeof(Caddr));
+    }      
+    return 0;   
+
+}

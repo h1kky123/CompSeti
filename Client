@@ -40,6 +40,50 @@ string waitForServerResponse() {
     }
 }
 
+int main() {
+    setlocale(LC_ALL, "rus");
+
+    while (true) {
+        cout << "\nВведите числа через пробел (или 'exit' для выхода): ";
+        string input;
+        getline(cin, input);
+
+        if (input == "exit") {
+            cout << "Выход..." << endl;
+            break;
+        }
+
+        clearFileBack(); // очищаем file_back.txt перед отправкой новых данных
+
+        // открываем файл в режиме добавления
+        ofstream file(filename, ios::app);
+        if (!file) {
+            cout << "Ошибка открытия файла!" << endl;
+            return 1;
+        }
+        file << input << ' '; // записываем данные
+        file.close();
+
+        //--------------------------------------------------------------//
+        ofstream logFile(logFilename, ios::app);
+        if (!logFile) {
+            cout << "Ошибка открытия файла лога!" << endl;
+            return 1;
+        }
+        logFile << input << endl;
+        logFile.close();
+        //--------------------------------------------------------------//
+
+        cout << "Данные записаны!" << endl;
+
+        // ожидаем обновления file_back.txt и выводим ответ
+        string response = waitForServerResponse();
+        cout << "Ответ от сервера:\n" << response << endl;
+    }
+
+    return 0;
+}
+
 Бинарный файл
 #include <fstream>
 #include <iostream>

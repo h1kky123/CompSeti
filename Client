@@ -92,7 +92,7 @@ struct Student {
 int main() {
     setlocale(LC_ALL, "rus");
     string filename = "C:\\Users\\Maybe\\source\\repos\\data.bin";
-    string resultFilename = "C:\\Maybe\\Admin\\source\\repos\\result.txt";
+    string resultFilename = "C:\\Users\\Maybe\\source\\repos\\result.txt";
 
     while (true) {
         cout << "\nВведите имя студента (или 'exit' для выхода): ";

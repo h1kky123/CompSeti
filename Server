@@ -124,7 +124,7 @@ struct Student {
     vector<int> grades;
 };
 
-Student readStudentFromFile(const string& filename) {
+Student readStudentFromFile(const string& filename, long long& lastModified) {
     ifstream file(filename, ios::binary);
     Student student;
 
@@ -159,6 +159,10 @@ Student readStudentFromFile(const string& filename) {
     // Читаем оценки
     student.grades.resize(gradesSize);
     file.read(reinterpret_cast<char*>(student.grades.data()), sizeof(int) * gradesSize);
+
+    // Получаем время последнего изменения файла
+    file.seekg(0, ios::end);
+    lastModified = file.tellg(); // Используем размер файла как индикатор изменений
     file.close();
 
     return student;
@@ -176,15 +180,23 @@ int main() {
     string filename = "C:\\Users\\Maybe\\source\\repos\\data.bin";
     string resultFilename = "C:\\Users\\Maybe\\source\\repos\\result.txt";
 
+    long long lastProcessedSize = -1; // Хранит размер последнего обработанного файла
+
     cout << "Сервер запущен и следит за изменением файла..." << endl;
 
     while (true) {
-        this_thread::sleep_for(chrono::seconds(1)); // Проверка каждую секунду
+        this_thread::sleep_for(chrono::seconds(1));
 
-        Student student = readStudentFromFile(filename);
-        if (student.grades.empty()) {
+        long long currentSize = 0;
+        Student student = readStudentFromFile(filename, currentSize);
+
+        // Если файл не изменился или пустой - пропускаем
+        if (currentSize == lastProcessedSize || student.grades.empty()) {
             continue;
         }
+
+        // Обновляем размер последнего обработанного файла
+        lastProcessedSize = currentSize;
 
         cout << "\nФайл обновлён!" << endl;
         cout << "Студент: " << student.name << endl;
@@ -199,9 +211,8 @@ int main() {
             continue;
         }
 
-        if (avg > 4.5) {
-            resultFile << "Студент " << student.name << ": Средний балл " << avg
-                << " - Получает стипендию!";
+        if (avg >= 4) {
+            resultFile << "Студент: " << student.name << "| Средний балл: " << avg << " | Студент получает стипендию!";
             cout << "Студент получает стипендию!" << endl;
         }
         else {
@@ -211,8 +222,6 @@ int main() {
         }
         resultFile.close();
     }
-
-    return 0;
 }
 
 
